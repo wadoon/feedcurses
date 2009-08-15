@@ -7,7 +7,7 @@ import feedparser
 import thread
 from threading import Timer
 import functools 
-import sys
+import sys, os
 import urwid.curses_display
 import urwid
 from urwid import *
@@ -18,18 +18,7 @@ __author__='Alexander Weigl'
 __version__ = 'v0.0.1'
 __date__='26. Jul. 2008'
 
-FEEDS = (
-    "http://www.heise.de/newsticker/heise-atom.xml",
-    "http://rss.golem.de/rss.php?feed=RSS1.0",
-    "http://feeds.wired.com/wired/index",
-    "http://feedproxy.google.com/TheDailyWtf",
-    "http://feeds.feedburner.com/catonmat"  ,
-    "http://weblogs.java.net/blog/editors/index.rdf",
-    "http://www.javaworld.com/index.xml",
-"http://feeds.feedburner.com/techtarget/tsscom/home",
-    
-    
-    )
+FEEDS = []
 
 class ClickText(Text):
     def __init__(self, url = '', updater = lambda x: x,  *args,**kwargs):
@@ -39,8 +28,14 @@ class ClickText(Text):
 
     def mouse_event(self, (maxcol,), event, button, x, y, focus):
         #self.callback(self, (maxcol,),event,button, x ,y,focus)
-        thread.start_new_thread(webbrowser.open, (self.url,))
-        self.updater('open %s ' % self.url)
+
+        #if self.button == 0: return False
+        
+        if "DISPLAY" in os.environ:
+            thread.start_new_thread(webbrowser.open, (self.url,))
+        else:
+            os.system("w3m %s" % self.url)
+        self.updater(str(button)+' open %s ' % self.url)
         return True
 
 class FeedManager:       
@@ -87,10 +82,10 @@ class CursesUi:
 
         self.header = urwid.AttrWrap( instruction, 'header' )
         self.footer =  urwid.Columns((
-                ('weight',1,Button('F1-Help', self.on_f1) ),
-                ('weight',1,Button('F2-Setup', self.on_f2)),
-                ('weight',1,Button('F3-Log', self.on_f2)),
-                ('weight',1,Button('F4-', self.on_f2)),
+#                ('weight',1,Button('F1-Help', self.on_f1) ),
+#                ('weight',1,Button('F2-Setup', self.on_f2)),
+#                ('weight',1,Button('F3-Log', self.on_f2)),
+#                ('weight',1,Button('F4-', self.on_f2)),
                 ('weight',4,AttrWrap( self.status_msg, 'status' )),
                 ))
         
@@ -171,6 +166,8 @@ class CursesUi:
                     self.feed.refresh()
                 elif "window resize" == k:
                     self.size = self.screen.get_cols_rows()
+                elif "ctrl l" == k:
+                    self.redraw()
                 self.listbox.keypress(self.size,k)
             self.redraw() 
 
@@ -221,6 +218,7 @@ class CursesUi:
                            datetime.now().strftime('%H:%m:%s') ) )
                         
         
-        
-CursesUi().main()
+if __name__ =="__main__":
+    FEEDS = open("feeds").read().split("\n")  
+    CursesUi().main()
 
